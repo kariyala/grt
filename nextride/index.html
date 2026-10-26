@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#121316">
+<title>GRT Stops</title>
+<style>
+:root{--bg:#121316;--card:#1b1d22;--card2:#23262c;--line:#2c3038;--txt:#eceef2;--mut:#8b919c;--acc:#e31c3d;--danger:#e5484d}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{overflow:hidden}
+header{position:fixed;top:0;left:0;right:0;height:calc(56px + env(safe-area-inset-top));padding:env(safe-area-inset-top) 12px 0;display:flex;align-items:center;gap:12px;background:var(--bg);border-bottom:1px solid var(--line);z-index:10}
+.ib{width:44px;height:44px;border:0;border-radius:12px;background:transparent;color:var(--txt);display:grid;place-items:center;cursor:pointer;transition:background .15s,transform .15s}
+.ib:active{background:var(--card2);transform:scale(.92)}
+.ib svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand img{height:30px;width:auto;max-width:150px;background:#fff;border-radius:6px;padding:3px 6px}
+.brand span{font-weight:600;font-size:17px}
+main{position:absolute;inset:0;padding:calc(72px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+
+/* search */
+.search{position:relative;max-width:520px;margin:0 auto 18px}
+.search input{width:100%;padding:13px 46px 13px 16px;font-size:16px;letter-spacing:0;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--txt);outline:none;transition:border-color .15s}
+.search input::-webkit-search-cancel-button{display:none}
+.search svg{position:absolute;right:15px;top:50%;width:20px;height:20px;margin-top:-10px;stroke:var(--mut);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.search input:focus+svg{stroke:var(--txt)}
+
+/* grid: smaller tiles, centred */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(116px,132px));justify-content:center;gap:12px;max-width:900px;margin:0 auto}
+.cell{position:relative}
+.tile{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;height:100%;min-height:136px;padding:16px 8px 20px;background:var(--card);border:1px solid var(--line);border-radius:18px;color:var(--txt);text-decoration:none;transition:transform .15s,background .15s;animation:pop .3s ease both;will-change:transform}
+.tile:active{transform:scale(.95);background:var(--card2)}
+.bus{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;flex:none}
+.bus svg{width:28px;height:28px;fill:#fff}
+.tile b{font-size:18px;font-weight:700;line-height:1.15;letter-spacing:.2px}
+.tile small{color:var(--mut);font-size:11.5px;line-height:1.25;margin-top:-4px;padding:0 4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.info{position:absolute;right:6px;top:6px;width:26px;height:26px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--mut);opacity:.5;display:grid;place-items:center;cursor:pointer;z-index:2;transition:opacity .15s}
+.info::before{content:"";position:absolute;inset:-6px}
+.info svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:color .15s}
+.info:hover,.info:focus-visible,.info.on{opacity:.9;outline:none}
+.empty{text-align:center;color:var(--mut);margin-top:60px}
+@keyframes pop{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:none}}
+
+/* info card */
+.pop{position:fixed;left:0;top:0;width:min(300px,calc(100vw - 24px));padding:16px;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.6);z-index:25;opacity:0;visibility:hidden;transform:translateY(4px);transition:opacity .15s,transform .15s,visibility .15s}
+.pop.on{opacity:1;visibility:visible;transform:none}
+.pop h3{margin:0 0 12px;font-size:16px;line-height:1.3}
+.pop .lbl{font-size:12.5px;color:var(--mut);margin-bottom:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{min-width:34px;padding:5px 10px;border-radius:9px;background:var(--card2);border:1px solid var(--line);font-size:14px;font-weight:600;text-align:center}
+.none{color:var(--mut);font-size:14px}
+.pf{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:13px;color:var(--mut)}
+.link{border:0;background:transparent;color:var(--txt);font-size:13px;font-weight:600;padding:6px 4px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.pop input{width:100%;padding:10px 12px;margin-bottom:10px;font-size:15px;letter-spacing:0;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--txt);outline:none}
+.pop input:focus{border-color:var(--acc)}
+.pop .two{display:flex;gap:8px}
+.pop .two .btn{margin-top:4px;padding:10px;font-size:14px}
+
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .25s;z-index:20}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;bottom:0;left:0;width:min(86vw,340px);background:var(--card);border-right:1px solid var(--line);transform:translateX(-100%);transition:transform .28s cubic-bezier(.3,.8,.3,1);z-index:30;overflow:hidden;padding-top:env(safe-area-inset-top);will-change:transform}
+.drawer.on{transform:none}
+.view{position:absolute;inset:env(safe-area-inset-top) 0 0 0;display:flex;flex-direction:column;padding:12px 16px calc(16px + env(safe-area-inset-bottom));transition:transform .28s cubic-bezier(.3,.8,.3,1),opacity .2s;will-change:transform}
+.view.right{transform:translateX(100%);opacity:0;pointer-events:none}
+.view.left{transform:translateX(-30%);opacity:0;pointer-events:none}
+.vh{display:flex;align-items:center;gap:8px;margin:0 -6px 14px;min-height:44px}
+.vh h2{margin:0;font-size:18px}
+.menu-btn{display:flex;align-items:center;gap:12px;width:100%;padding:15px 14px;margin-bottom:8px;border:1px solid var(--line);border-radius:14px;background:var(--card2);color:var(--txt);font-size:16px;cursor:pointer;text-align:left;transition:transform .12s}
+.menu-btn:active{transform:scale(.97)}
+label{font-size:13px;color:var(--mut);margin-bottom:8px;display:block}
+input[type=text],input[type=search]{width:100%;padding:14px;font-size:20px;letter-spacing:4px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--txt);outline:none;transition:border-color .15s}
+input[type=search]{font-size:16px;letter-spacing:0}
+input:focus{border-color:var(--acc)}
+.btn{width:100%;margin-top:14px;padding:14px;border:0;border-radius:12px;background:var(--acc);color:#fff;font-size:16px;font-weight:600;cursor:pointer;transition:transform .12s,opacity .15s}
+.btn:active{transform:scale(.97)}
+.btn.sec{background:var(--card2);border:1px solid var(--line);color:var(--txt)}
+.btn.del{background:var(--danger)}
+.msg{min-height:20px;margin-top:10px;font-size:14px;color:var(--mut)}
+.msg.err{color:var(--danger)}.msg.ok{color:#4cc38a}
+.list{flex:1;overflow-y:auto;margin-top:12px;overscroll-behavior:contain}
+.row{display:flex;align-items:center;gap:12px;width:100%;padding:10px;margin-bottom:8px;border:1px solid var(--line);border-radius:14px;background:var(--card2);color:var(--txt);font-size:15px;cursor:pointer;text-align:left}
+.row:active{background:var(--line)}
+.row .bus{width:38px;height:38px;border-radius:11px}.row .bus svg{width:22px;height:22px}
+.row span.t{flex:1}
+.row svg.tr{width:20px;height:20px;stroke:var(--danger);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.dcard{position:absolute;left:12px;right:12px;bottom:calc(16px + env(safe-area-inset-bottom));padding:20px;background:var(--bg);border:1px solid var(--line);border-radius:18px;box-shadow:0 10px 40px rgba(0,0,0,.6);transform:translateY(130%);opacity:0;transition:transform .28s cubic-bezier(.3,.8,.3,1),opacity .2s;z-index:5}
+.dcard.on{transform:none;opacity:1}
+.dcard h3{margin:0 0 6px;font-size:17px}.dcard p{margin:0;color:var(--mut);font-size:14px}
+.dcard .two{display:flex;gap:10px}
+</style>
+</head>
+<body>
+<header>
+  <button class="ib" id="open" aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  <div class="brand">
+    <img id="logo" alt="Grand River Transit" src="https://en.wikipedia.org/wiki/Special:FilePath/Grand_River_Transit_logo.svg">
+    <span id="logoTxt" hidden>GRT Stops</span>
+  </div>
+</header>
+<main id="main">
+  <div class="search">
+    <input type="search" id="gq" placeholder="Search stops" autocomplete="off" aria-label="Search stops">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" hidden>No stops yet. Open the menu to add one.</div>
+</main>
+
+<div class="pop" id="pop" role="dialog" aria-label="Stop details"></div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer">
+  <section class="view" id="v-main">
+    <div class="vh"><h2>Menu</h2></div>
+    <button class="menu-btn" data-go="v-add">＋ Add New Stop</button>
+    <button class="menu-btn" data-go="v-manage">⚙ Manage Stops</button>
+  </section>
+
+  <section class="view right" id="v-add">
+    <div class="vh"><button class="ib back" data-go="v-main" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><h2>Add New Stop</h2></div>
+    <label for="code">Enter Stop Code</label>
+    <input type="text" id="code" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="0000">
+    <div class="msg" id="addMsg"></div>
+    <button class="btn" id="addBtn">Add Stop</button>
+  </section>
+
+  <section class="view right" id="v-manage">
+    <div class="vh"><button class="ib back" data-go="v-main" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><h2>Manage Stops</h2></div>
+    <button class="menu-btn" data-go="v-del">🗑 Delete Stops</button>
+  </section>
+
+  <section class="view right" id="v-del">
+    <div class="vh"><button class="ib back" data-go="v-manage" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><h2>Delete Stops</h2></div>
+    <input type="search" id="q" placeholder="Search stops" autocomplete="off">
+    <div class="list" id="dlist"></div>
+    <div class="dcard" id="dcard">
+      <h3 id="dTitle"></h3><p>This removes the stop from your grid.</p>
+      <div class="two"><button class="btn sec" id="dNo">Cancel</button><button class="btn del" id="dYes">Delete</button></div>
+    </div>
+  </section>
+</aside>
+
+<script>
+(function(){
+var KEY='grtStops',COLORS=['#e31c3d','#2f7de1','#1fa971','#f08c1a','#8e5bd6','#14a3b8','#d6458f','#6f8f1f'];
+// Built-in details. Anything missing can be filled in with Edit on the info card.
+var DEFAULTS={
+  '1659':{name:'Morgan / Southill',routes:[]},
+  '1047':{name:'Fairway / Highway 8',routes:['1','8','23','27']}
+};
+var stops=[];
+function load(){try{var s=JSON.parse(localStorage.getItem(KEY));if(Array.isArray(s))return s}catch(e){}return null}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(stops))}catch(e){}}
+stops=load()||[{code:'1659',c:0},{code:'1047',c:1}];
+// fill in details for stops saved before names existed
+stops.forEach(function(s){
+  var d=DEFAULTS[s.code];
+  // fix names saved from the earlier swapped version
+  if(s.code==='1659'&&s.name==='Fairway / Highway 8'){s.name=d.name;s.routes=d.routes.slice()}
+  if(s.code==='1047'&&s.name==='Morgan / Southill'){s.name=d.name;s.routes=d.routes.slice()}
+  if(s.name===undefined&&d)s.name=d.name;
+  if(!Array.isArray(s.routes))s.routes=d?d.routes.slice():[];
+});
+save();
+function nextColor(){var used={};stops.forEach(function(s){used[s.c]=(used[s.c]||0)+1});var best=0,min=1e9;COLORS.forEach(function(_,i){var n=used[i]||0;if(n<min){min=n;best=i}});return best}
+var BUS='<svg viewBox="0 0 24 24"><path d="M4 16V6a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v10a2 2 0 0 1-1 1.7V19a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H8v1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-1.3A2 2 0 0 1 4 16Zm2-9v4h12V7a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1Zm2.5 9a1.3 1.3 0 1 0 0-2.6 1.3 1.3 0 0 0 0 2.6Zm7 0a1.3 1.3 0 1 0 0-2.6 1.3 1.3 0 0 0 0 2.6Z"/></svg>';
+var INFO='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.8" r=".6" fill="currentColor"/></svg>';
+var $=function(i){return document.getElementById(i)};
+function esc(t){return String(t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function find(code){for(var i=0;i<stops.length;i++)if(stops[i].code===code)return stops[i]}
+function title(s){return s.name?s.name:'Stop '+s.code}
+
+// ---------- grid ----------
+function match(s,q){
+  if(!q)return true;q=q.toLowerCase();
+  return s.code.indexOf(q)>-1||(s.name||'').toLowerCase().indexOf(q)>-1||(s.routes||[]).some(function(r){return r.toLowerCase()===q});
+}
+function render(){
+  closePop();
+  var q=$('gq').value.trim(),h='',n=0;
+  stops.forEach(function(s){
+    if(!match(s,q))return;n++;
+    h+='<div class="cell"><a class="tile" target="_blank" rel="noopener" href="https://nextride.grt.ca/stops/'+s.code+'"><div class="bus" style="background:'+COLORS[s.c%COLORS.length]+'">'+BUS+'</div><b>Stop '+s.code+'</b>'+(s.name?'<small>'+esc(s.name)+'</small>':'')+'</a><button class="info" data-code="'+s.code+'" aria-label="Details for stop '+s.code+'">'+INFO+'</button></div>';
+  });
+  $('grid').innerHTML=h;
+  var e=$('empty');e.hidden=n>0;
+  e.textContent=stops.length?'No stops match your search.':'No stops yet. Open the menu to add one.';
+}
+function renderList(){
+  var q=$('q').value.trim(),h='';
+  stops.filter(function(s){return match(s,q)}).forEach(function(s){h+='<button class="row" data-code="'+s.code+'"><div class="bus" style="background:'+COLORS[s.c%COLORS.length]+'">'+BUS+'</div><span class="t">'+esc(title(s))+' <span style="color:var(--mut)">#'+s.code+'</span></span><svg class="tr" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>'});
+  $('dlist').innerHTML=h||'<div class="msg">No matching stops.</div>';
+}
+$('gq').addEventListener('input',render);
+
+// ---------- info card ----------
+var pop=$('pop'),popBtn=null,pinned=false,closeT=null,lastType='mouse';
+function viewHtml(s){
+  var r=s.routes||[];
+  return '<h3>'+esc(title(s))+'</h3><div class="lbl">Buses at this stop</div>'+
+    (r.length?'<div class="chips">'+r.map(function(x){return '<span class="chip">'+esc(x)+'</span>'}).join('')+'</div>':'<div class="none">No routes added yet.</div>')+
+    '<div class="pf"><span>Stop '+s.code+'</span><button class="link" data-act="edit">Edit</button></div>';
+}
+function editHtml(s){
+  return '<h3>Edit stop '+s.code+'</h3><label for="eName">Stop name</label><input type="text" id="eName" style="letter-spacing:0" maxlength="60" placeholder="Fairway / Highway 8" value="'+esc(s.name||'')+'">'+
+    '<label for="eRoutes">Buses (comma separated)</label><input type="text" id="eRoutes" style="letter-spacing:0" maxlength="60" placeholder="1, 8, 23, 27" value="'+esc((s.routes||[]).join(', '))+'">'+
+    '<div class="two"><button class="btn sec" data-act="cancel">Cancel</button><button class="btn" data-act="save">Save</button></div>';
+}
+function place(){
+  if(!popBtn)return;
+  var r=popBtn.getBoundingClientRect(),w=pop.offsetWidth,h=pop.offsetHeight,vw=window.innerWidth,vh=window.innerHeight;
+  var left=Math.min(Math.max(12,r.right-w),vw-w-12);
+  var top=r.bottom+8;
+  if(top+h>vh-12)top=Math.max(12,r.top-h-8);
+  pop.style.left=left+'px';pop.style.top=top+'px';
+}
+function openPop(btn,editing){
+  clearTimeout(closeT);
+  var s=find(btn.getAttribute('data-code'));if(!s)return;
+  if(popBtn&&popBtn!==btn)popBtn.classList.remove('on');
+  popBtn=btn;btn.classList.add('on');
+  pop.innerHTML=editing?editHtml(s):viewHtml(s);
+  place();pop.classList.add('on');
+  if(editing)$('eName').focus();
+}
+function closePop(){
+  clearTimeout(closeT);pinned=false;
+  pop.classList.remove('on');
+  if(popBtn)popBtn.classList.remove('on');popBtn=null;
+}
+function softClose(){clearTimeout(closeT);if(pinned)return;closeT=setTimeout(closePop,180)}
+var grid=$('grid');
+grid.addEventListener('pointerdown',function(e){var b=e.target.closest('.info');if(b)lastType=e.pointerType||'mouse'});
+grid.addEventListener('pointerover',function(e){
+  var b=e.target.closest('.info');if(!b||e.pointerType==='touch'||pinned)return;
+  openPop(b,false);
+});
+grid.addEventListener('pointerout',function(e){
+  var b=e.target.closest('.info');if(!b||e.pointerType==='touch')return;
+  if(e.relatedTarget&&b.contains(e.relatedTarget))return;
+  softClose();
+});
+grid.addEventListener('click',function(e){
+  var b=e.target.closest('.info');if(!b)return;
+  e.preventDefault();
+  if(lastType==='mouse'||lastType==='pen'){lastType='mouse';if(!pop.classList.contains('on')||popBtn!==b)openPop(b,false);return}
+  // touch / keyboard: tap toggles and keeps the card open
+  if(popBtn===b&&pop.classList.contains('on')){closePop();return}
+  openPop(b,false);pinned=true;
+  lastType='mouse';
+});
+grid.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' ')lastType='key'});
+pop.addEventListener('pointerenter',function(){clearTimeout(closeT)});
+pop.addEventListener('pointerleave',function(){softClose()});
+pop.addEventListener('click',function(e){
+  var a=e.target.closest('[data-act]');if(!a||!popBtn)return;
+  var act=a.getAttribute('data-act'),s=find(popBtn.getAttribute('data-code'));if(!s)return;
+  if(act==='edit'){pinned=true;pop.innerHTML=editHtml(s);place();$('eName').focus()}
+  else if(act==='cancel'){pop.innerHTML=viewHtml(s);place()}
+  else if(act==='save'){
+    s.name=$('eName').value.trim();
+    s.routes=$('eRoutes').value.split(/[,\s]+/).map(function(x){return x.trim()}).filter(Boolean).filter(function(x,i,a){return a.indexOf(x)===i});
+    save();var code=s.code;render();
+    var nb=document.querySelector('.info[data-code="'+code+'"]');
+    if(nb){openPop(nb,false);pinned=true}
+  }
+});
+document.addEventListener('pointerdown',function(e){
+  if(!pop.classList.contains('on'))return;
+  if(pop.contains(e.target)||e.target.closest('.info'))return;
+  closePop();
+},true);
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closePop()});
+$('main').addEventListener('scroll',closePop,{passive:true});
+window.addEventListener('resize',closePop);
+
+// ---------- drawer ----------
+var cur='v-main';
+function open(){closePop();$('drawer').classList.add('on');$('scrim').classList.add('on')}
+function close(){$('drawer').classList.remove('on');$('scrim').classList.remove('on');hideCard();setTimeout(function(){show('v-main',true)},300)}
+var order=['v-main','v-add','v-manage','v-del'];
+function show(id,instant){
+  var ni=order.indexOf(id);
+  order.forEach(function(v,i){var el=$(v);el.classList.remove('left','right');if(i<ni)el.classList.add('left');else if(i>ni)el.classList.add('right')});
+  cur=id;hideCard();
+  if(id==='v-del'){$('q').value='';renderList()}
+  if(id==='v-add'){$('code').value='';msg('');}
+}
+function msg(t,c){var m=$('addMsg');m.textContent=t;m.className='msg'+(c?' '+c:'')}
+$('open').onclick=open;$('scrim').onclick=close;
+document.querySelectorAll('[data-go]').forEach(function(b){b.onclick=function(){show(b.getAttribute('data-go'))}});
+
+// ---------- add ----------
+$('code').addEventListener('input',function(){this.value=this.value.replace(/\D/g,'').slice(0,4);msg('')});
+function add(){
+  var v=$('code').value;
+  if(v.length!==4){msg('Stop code must be exactly 4 digits.','err');return}
+  if(stops.some(function(s){return s.code===v})){msg('Stop '+v+' is already in your list.','err');return}
+  var d=DEFAULTS[v];
+  stops.push({code:v,c:nextColor(),name:d?d.name:'',routes:d?d.routes.slice():[]});save();
+  $('gq').value='';render();
+  $('code').value='';msg('Stop '+v+' added. Tap its ⓘ to add the name and buses.','ok');
+  $('code').blur();
+  setTimeout(function(){var g=$('main');g.scrollTo({top:g.scrollHeight,behavior:'smooth'})},320);
+}
+$('addBtn').onclick=add;
+$('code').addEventListener('keydown',function(e){if(e.key==='Enter')add()});
+
+// ---------- delete ----------
+var pending=null;
+function hideCard(){$('dcard').classList.remove('on');pending=null}
+$('q').addEventListener('input',renderList);
+$('dlist').addEventListener('click',function(e){
+  var r=e.target.closest('.row');if(!r)return;
+  pending=r.getAttribute('data-code');var s=find(pending);$('dTitle').textContent='Delete '+(s?title(s):'Stop '+pending)+'?';$('dcard').classList.add('on');
+});
+$('dNo').onclick=hideCard;
+$('dYes').onclick=function(){
+  if(!pending)return;
+  stops=stops.filter(function(s){return s.code!==pending});save();render();renderList();hideCard();
+};
+
+// logo fallback
+$('logo').onerror=function(){this.hidden=true;$('logoTxt').hidden=false};
+// swipe left to close
+var sx=null;$('drawer').addEventListener('touchstart',function(e){sx=e.touches[0].clientX},{passive:true});
+$('drawer').addEventListener('touchend',function(e){if(sx!==null&&sx-e.changedTouches[0].clientX>70)close();sx=null},{passive:true});
+render();
+})();
+</script>
+</body>
+</html>
